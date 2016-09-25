@@ -4,6 +4,10 @@ library(chromVAR)
 library(Matrix)
 library(BSgenome.Mmusculus.UCSC.mm10)
 library(GenomicRanges)
+library(plotly)
+library(heatmaply)
+
+if (basename(getwd()) != "code") setwd("code")
 
 # For laptop
 BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = FALSE))
@@ -37,11 +41,18 @@ peaks_to_keep <- filter_peaks(counts, peaks, non_overlapping = TRUE)
 #' ## Get motifs; compute deviations. 
 #+ cache = TRUE, message=FALSE, warning=FALSE
 bg <- get_background_peaks(counts_mat = counts, bias = peaks)
-motifs <- get_motifs(species = "Mus musculus")
-motif_ix <- match_pwms(motifs, peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
-deviations <- compute_deviations(counts_mat = counts, background_peaks = bg, peak_indices = motif_ix)
+
+# chromVAR motifs
+#motifs <- get_motifs(species = "Mus musculus")
+# load our own
+load("../data/cisbp_mm9_unique.08_Jun_2016.RData")
+
+#motif_ix <- match_pwms(pwms, peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
+#deviations <- compute_deviations(counts_mat = counts, background_peaks = bg, peak_indices = motif_ix)
+#saveRDS(deviations, file = "../output/deviations.rds")
+deviations <- readRDS("../output/deviations.rds")
 variability <- compute_variability(deviations$z)
-labels <- TFBSTools::name(motifs[rownames(variability)])
+labels <- TFBSTools::name(pwms[rownames(variability)])
 
 
 #' ## View plots of variable TFs and deviation heatmap
@@ -49,9 +60,15 @@ labels <- TFBSTools::name(motifs[rownames(variability)])
 plot_variability(variability, labels = labels)
 
 boo <- which(variability$p_value_adj<0.1)
-plot_deviations(deviations$z[boo,],set_names = labels[boo])
+#plot_deviations(deviations$z[boo,],set_names = labels[boo])
 
-#' ## Export table of deviation scores for cells
-d <- deviations$z
-rownames(d) <- labels
-write.table(d, file = "../output/deviationScoresImmgen.txt", row.names = TRUE, col.names = TRUE, quote = FALSE, sep = "\t")
+#' ## View clusters of TF
+#+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
+df <- deviations$z[boo,]
+tfcor <- cor(t(df))
+heatmaply(tfcor)
+
+#' ## View clusters of samples
+#+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
+samplecor <- cor(df)
+heatmaply(samplecor)
