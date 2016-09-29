@@ -24,7 +24,15 @@ names(peakdf) <- c("chr", "start", "end", "name")
 peaks <- GRanges(peakdf)
 
 peaks <- get_gc(peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
+praw <- peaks
 peaks <- sort(peaks)
+counts <- counts[match(peaks,praw),]
+
+#' ## Update sample names from lib -> cell name
+namesdf <- read.table("../data/libnames.txt", header = TRUE)
+namesvec <- as.character(namesdf[,2])
+names(namesvec) <- namesdf[,1]
+colnames(counts) <- unname(namesvec[colnames(counts)])
 
 #' ## These are the samples that didn't pass bias filtering
 #+ cache = TRUE, message=FALSE, warning=FALSE
@@ -35,8 +43,8 @@ counts <- counts[, low_bias_samples]
 #' ### All peaks passed the filter_peaks function
 #+ cache = TRUE, message=FALSE, warning=FALSE
 peaks_to_keep <- filter_peaks(counts, peaks, non_overlapping = TRUE)
-#counts <- counts[peaks_to_keep,]
-#peaks <- peaks[peaks_to_keep] 
+counts <- counts[peaks_to_keep,]
+peaks <- peaks[peaks_to_keep] 
 
 #' ## Get motifs; compute deviations. 
 #+ cache = TRUE, message=FALSE, warning=FALSE
@@ -58,17 +66,19 @@ labels <- TFBSTools::name(pwms[rownames(variability)])
 #' ## View plots of variable TFs and deviation heatmap
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
 plot_variability(variability, labels = labels)
+boo <- which(variability$p_value_adj<0.0001)
 
-boo <- which(variability$p_value_adj<0.1)
-#plot_deviations(deviations$z[boo,],set_names = labels[boo])
+#' ## View TF x Sample clusters
+#+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
+df <- deviations$z[boo,]
+heatmaply(df, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
 
 #' ## View clusters of TF
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
-df <- deviations$z[boo,]
 tfcor <- cor(t(df))
-heatmaply(tfcor)
+heatmaply(tfcor, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
 
 #' ## View clusters of samples
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
 samplecor <- cor(df)
-heatmaply(samplecor)
+heatmaply(samplecor, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
