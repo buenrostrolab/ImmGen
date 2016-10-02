@@ -1,4 +1,4 @@
-#+ echo=TRUE, message=FALSE, warning=FALSE
+#+ echo=FALSE, message=FALSE, warning=FALSE
 library(readr)
 library(chromVAR)
 library(Matrix)
@@ -12,14 +12,14 @@ if (basename(getwd()) != "code") setwd("code")
 # For laptop
 BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = FALSE))
 
-#' Analysis of ImmeGen Consortium ATAC data using chromVAR
-# Performed by Caleb Lareau, 24 September
+#' Analysis of ImmGen Consortium ATAC data using chromVAR
+# Performed by Caleb Lareau, 2 October
 
 #' ## Load data
-#+ cache = TRUE, message=FALSE, warning=FALSE
-csv <- "../data/160923_Immgen.csv.zip"
-counts <- Matrix(data.matrix(read_csv(csv)[,-1]))
-peakdf <- read.table("../data/120923_Immgen.bed")
+#+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
+csv <-  "../data/021016_newCounts.csv"
+counts <- Matrix(data.matrix(read_csv(csv)))
+peakdf <- read.table("../data/021016_ImmGen_500bpPeaks.bed")
 names(peakdf) <- c("chr", "start", "end", "name")
 peaks <- GRanges(peakdf)
 
@@ -29,25 +29,26 @@ peaks <- sort(peaks)
 counts <- counts[match(peaks,praw),]
 
 #' ## Update sample names from lib -> cell name
+#+ echo = FALSE
 namesdf <- read.table("../data/libnames.txt", header = TRUE)
 namesvec <- as.character(namesdf[,2])
 names(namesvec) <- namesdf[,1]
 colnames(counts) <- unname(namesvec[colnames(counts)])
 
 #' ## These are the samples that didn't pass bias filtering
-#+ cache = TRUE, message=FALSE, warning=FALSE
+#+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
 low_bias_samples <- bias_filtering(counts, peaks)
 colnames(counts)[!colnames(counts) %in% names(low_bias_samples)]
 counts <- counts[, low_bias_samples]
 
 #' ### All peaks passed the filter_peaks function
-#+ cache = TRUE, message=FALSE, warning=FALSE
+#+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
 peaks_to_keep <- filter_peaks(counts, peaks, non_overlapping = TRUE)
 counts <- counts[peaks_to_keep,]
 peaks <- peaks[peaks_to_keep] 
 
 #' ## Get motifs; compute deviations. 
-#+ cache = TRUE, message=FALSE, warning=FALSE
+#+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
 bg <- get_background_peaks(counts_mat = counts, bias = peaks)
 
 # chromVAR motifs
