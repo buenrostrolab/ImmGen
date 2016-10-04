@@ -17,7 +17,7 @@ BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = FALSE))
 
 #' ## Load data
 #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
-csv <-  "../data/021016_newCounts.csv"
+csv <-  "../data/021016_newCounts.csv.zip"
 counts <- Matrix(data.matrix(read_csv(csv)))
 peakdf <- read.table("../data/021016_ImmGen_500bpPeaks.bed")
 names(peakdf) <- c("chr", "start", "end", "name")
@@ -72,7 +72,14 @@ boo <- which(variability$p_value_adj<0.0001)
 #' ## View TF x Sample clusters
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
 df <- deviations$z[boo,]
+df2 <- df
+df2[df2 > 5] <- 5
+df2[df2 < -5] <- -5
 heatmaply(df, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
+
+#' ## View TF x Sample clusters with c(-5,5) as limits
+#+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
+heatmaply(df2, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
 
 #' ## View clusters of TF
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
