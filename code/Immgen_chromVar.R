@@ -48,6 +48,11 @@ if(FALSE){
     counts <- counts[peaks_to_keep,]
     peaks <- peaks[peaks_to_keep] 
 }
+
+peakdf <- read.table("../data/161021_peaks_quick.bed")
+names(peakdf) <- c("chr", "start", "end", "name")
+peaks <- GRanges(peakdf)
+
 #' ## Get motifs; compute deviations. 
 #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
 bg <- get_background_peaks(counts_mat = counts, bias = peaks)
