@@ -13,83 +13,68 @@ if (basename(getwd()) != "code") setwd("code")
 BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = FALSE))
 
 #' Analysis of ImmGen Consortium ATAC data using chromVAR
-# Performed by Caleb Lareau, 2 October
+# Performed by Caleb Lareau, 19 November
 
-#' ## Load data
-if(FALSE){
-    #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
-    csv <-  "../data/021016_newCounts.csv.zip"
-    counts <- Matrix(data.matrix(read_csv(csv)))
-    peakdf <- read.table("../data/021016_ImmGen_500bpPeaks.bed")
-    names(peakdf) <- c("chr", "start", "end", "name")
-    peaks <- GRanges(peakdf)
-    
-    peaks <- get_gc(peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
-    praw <- peaks
-    peaks <- sort(peaks)
-    counts <- counts[match(peaks,praw),]
-    
-    #' ## Update sample names from lib -> cell name
-    #+ echo = FALSE
-    namesdf <- read.table("../data/libnames.txt", header = TRUE)
-    namesvec <- as.character(namesdf[,2])
-    names(namesvec) <- namesdf[,1]
-    colnames(counts) <- unname(namesvec[colnames(counts)])
-    
-    #' ## These are the samples that didn't pass bias filtering
-    #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
-    low_bias_samples <- bias_filtering(counts, peaks)
-    #colnames(counts)[!colnames(counts) %in% names(low_bias_samples)]
-    #counts <- counts[, low_bias_samples]
-    
-    #' ### All peaks passed the filter_peaks function
-    #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
-    peaks_to_keep <- filter_peaks(counts, peaks, non_overlapping = TRUE)
-    counts <- counts[peaks_to_keep,]
-    peaks <- peaks[peaks_to_keep] 
-}
-
-peakdf <- read.table("../data/161021_peaks_quick.bed")
-names(peakdf) <- c("chr", "start", "end", "name")
-peaks <- GRanges(peakdf)
-
-#' ## Get motifs; compute deviations. 
 #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
-bg <- get_background_peaks(counts_mat = counts, bias = peaks)
-
-# chromVAR motifs
-#motifs <- get_motifs(species = "Mus musculus")
-# load our own
+# csv <-  "../data/ImmGen_ATAC_Counts.csv"
+# counts <- Matrix(data.matrix(read_csv(csv)))
+# peakdf <- read.table("../data/ImmGen.ATAC.master.peaks.bed")
+# names(peakdf) <- c("chr", "start", "end", "name")
+# peaks <- GRanges(peakdf)
+# 
+# peaks <- get_gc(peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
+# praw <- peaks
+# peaks <- sort(peaks)
+# counts <- counts[match(peaks,praw),]
+# 
+# #' ## Get motifs; compute deviations. 
+# #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
+# bg <- get_background_peaks(counts_mat = counts, bias = peaks)
+# 
+# # chromVAR motifs
+# #motifs <- get_motifs(species = "Mus musculus")
+# # load our own
 load("../data/cisbp_mm9_unique.08_Jun_2016.RData")
+# 
+# motif_ix <- match_pwms(pwms, peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
+# motif_score <- match_pwms(pwms, peaks, genome = BSgenome.Mmusculus.UCSC.mm10, out = "scores")
+# deviations <- compute_deviations(counts_mat = counts, background_peaks = bg, peak_indices = motif_ix)
+# saveRDS(deviations, file = "../output/deviations.rds")
 
-motif_ix <- match_pwms(pwms, peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
-motif_score <- match_pwms(pwms, peaks, genome = BSgenome.Mmusculus.UCSC.mm10, out = "scores")
-deviations <- compute_deviations(counts_mat = counts, background_peaks = bg, peak_indices = motif_ix)
-saveRDS(deviations, file = "../output/deviations.rds")
 deviations <- readRDS("../output/deviations.rds")
 variability <- compute_variability(deviations$z)
 labels <- TFBSTools::name(pwms[rownames(variability)])
 
-#Kmer stuff
-kmer_idx <- get_kmer_indices(peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
-write.table(data.frame(data.matrix(kmer_idx)), file = "../data/161021_peaksXkmer.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+namesdf <- read.table("../data/libnames.txt", header = FALSE)
+namesvec <- as.character(namesdf[,2])
+names(namesvec) <- namesdf[,1]
 
-#' ## View plots of variable TFs and deviation heatmap
+#Kmer stuff
+# kmer_idx <- get_kmer_indices(peaks, genome = BSgenome.Mmusculus.UCSC.mm10)
+#write.table(data.frame(data.matrix(kmer_idx)), file = "../data/161119_peaksXkmer.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+
+## View plots of variable TFs and deviation heatmap
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
-plot_variability(variability, labels = labels)
-boo <- which(variability$p_value_adj<0.0001)
+#plot_variability(variability, labels = labels)
+boo <- which(variability$p_value_adj<10^-323)
+length(boo)
+#write.table(data.frame(data.matrix(motif_score)), file = "../data/161119_peaksXscores.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+#write.table(data.frame(data.matrix(motif_ix)), file = "../data/161119_peaksXmatch.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+#write.table(data.frame(data.matrix((deviations$z))), file = "../data/161119_motifsXsamples_zscores.tsv", sep = "\t", row.names = TRUE, quote = FALSE)
 
 #' ## View TF x Sample clusters
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
-df <- deviations$z[boo,]
+z <- deviations$z
+colnames(z) <- names(namesvec[colnames(z)])
+df <- z[boo,]
 df2 <- df
 df2[df2 > 5] <- 5
 df2[df2 < -5] <- -5
-heatmaply(df, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
+heatmaply(df, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"), limits = c(-5, 5))
 
 #' ## View TF x Sample clusters with c(-5,5) as limits
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
-heatmaply(df2, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
+#heatmaply(df2, scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", high = "red"))
 
 #' ## View clusters of TF
 #+ fig.width=7, fig.height=7, message = FALSE, warning = FALSE, echo=FALSE
