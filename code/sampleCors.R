@@ -36,6 +36,12 @@ cor.outs <- readRDS("../data/cor.outs.rds")
 cor.all <- readRDS("../data/cor.all.rds")
 cor.TSS <- readRDS("../data/cor.TSS.rds")
 
+# Build KNN graph
+n <- 4
+mat <- cbind(rep(1:199, n), as.numeric(get.knn(cor.outs, k = n)$nn.index))
+igraphObj <- igraph::graph_from_adjacency_matrix(igraph::get.adjacency(igraph::graph.edgelist(mat, directed=TRUE)), mode = "directed")
+l <- igraph::layout_with_drl(igraphObj, options=list(simmer.attraction=0))
+
 #' # All Peaks
 #+ echo=FALSE, message=FALSE, warning=FALSE, fig.height = 7, fig.width = 7
 heatmaply(cor.all, limits = c(0.25,1),
