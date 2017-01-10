@@ -1,21 +1,28 @@
-#+ echo=TRUE, message=FALSE, warning=FALSE
+# Install CRAN Packages if necessary
+install.packages("Matrix")
+install.packages("readr")
+
+# Intall Bioconductor Packages if necessary
+source("https://bioconductor.org/biocLite.R")
+biocLite("Rsamtools")
+biocLite("GenomicRanges")
+biocLite("BiocParallel")
+
+# Load Libraries and CL source code
 library(readr)
-library(chromVAR)
 library(Matrix)
 library(GenomicRanges)
-source("cl.R")
 
-if (basename(getwd()) != "code") setwd("code")
+# Register Paralleization; change 2 to 1 if multiple cores are not available
+BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = TRUE))  # Update this with more cores if appropriate
 
-# For laptop
-BiocParallel::register(BiocParallel::MulticoreParam(2, progressbar = TRUE))
+bed <- "/Users/lareauc/Downloads/ImmGenATAC1219.peak.bed"   # Point to new bed file with peaks
+bamdir <- "/Users/lareauc/Downloads/OneDrive-2016-12-21/"  # Point to directory with bam files
 
-bed <- "../data/ImmGen.ATAC.master.peaks.bed"
-bamfiles <- list.files("../../ImmGen_BAM", full.names = TRUE)[c(TRUE,FALSE)]
+bamfiles <- list.files(bamdir, full.names = TRUE, pattern = "\\.bam$")
 peaks <- get_peaks(bed, sort_peaks = FALSE)
-counts <- get_counts_from_bams_cl(bamfiles, peaks, paired = TRUE)
-colnamesLib <- sapply(strsplit(basename(bamfiles), split = "[.]"), function(s) s[1])
-colnames(counts) <- colnamesLib
+counts <- get_counts(bamfiles, peaks, paired = TRUE)  # Takes a while to execute
+
 write.table(counts, sep = ",", col.names = TRUE, row.names = FALSE, quote = FALSE, file = "../data/ImmGen_ATAC_Counts.csv")
 
 
