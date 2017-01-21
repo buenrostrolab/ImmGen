@@ -51,7 +51,7 @@ Of the 827 motifs that do have at least 1 association p-value $p_a$ such that $p
 ```{r pressure, echo=FALSE, cache = TRUE}
 library(ggplot2)
 library(BuenColors)
-cd <- readRDS("../output/TFscoreDesnity.rds")
+cd <- readRDS("../../output/TFscoreDesnity.rds")
 cd$logDensity <- log10(cd$density)
 ggplot(cd, aes( x = x,  y = y, color = logDensity)) + theme(plot.subtitle = element_text(vjust = 1), 
     plot.caption = element_text(vjust = 1)) +labs(title = "Sample-Motif TF Score Threshold Comparison", 
