@@ -57,6 +57,8 @@ if(FALSE){
   motiflvl <- levels(motifidx)
   p04match <- SummarizedExperiment(assays=list(matches = sparseMatrix(i = peakidx, j = as.numeric(motifidx))),
                                    colData = DataFrame(motif = motiflvl, row.names = motiflvl), rowRanges = immgen@rowRanges)
+  saveRDS(p04match, file = "../output/match04se.rds")
+  
   dev04 <- compute_deviations(immgen, annotations = p04match, background_peaks = bg, expectation = expectation)
   saveRDS(dev04, file="../output/p04dev.rds")
   
@@ -66,6 +68,9 @@ if(FALSE){
   dev05 <- compute_deviations(immgen, annotations = p05match, background_peaks = bg, expectation = expectation)
   saveRDS(dev05, file="../output/p05dev.rds")
 }
+
+# match object
+p04match <- readRDS("../output/match04se.rds")
 
 dev04 <- readRDS("../output/p04dev.rds")
 dev05 <- readRDS("../output/p05dev.rds")
