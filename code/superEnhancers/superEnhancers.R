@@ -6,6 +6,7 @@ library(GenomeInfoDb)
 library(rtracklayer)
 library(GenomicRanges)
 library(ggplot2)
+library(ggrepel)
 
 # TSS Peaks
 d <- read.table("../../../immgen_dat/ImmGenATAC1219.peak.bed", header = FALSE)
@@ -13,6 +14,10 @@ anno <- as.character(read.table("../../data/peakAnnoVector.txt", header =TRUE)[,
 dd <- d[anno == "outside", ]
 mid <- (dd$V2 + dd$V3)/2
 chr_name <- dd$V1
+gene_anno <- as.character(read.table("geneNames.txt", header =TRUE)[,1])
+gene_anno <- gene_anno[anno=="outside"]
+
+gdf <- makeGRangesFromDataFrame(data.frame(chr = dd$V1, start = dd$V2, end = dd$V3, gene = gene_anno), keep.extra.columns = TRUE)
 
 # Counts 
 csv <- "../../../immgen_dat/ATAC.density.population.mean.csv.gz"
@@ -50,24 +55,34 @@ xx <- lapply(chrs, function(chr){
 })
 bedgraph <- data.frame(rbindlist(xx, use.names=FALSE, fill=FALSE, idcol=NULL))
 g <- GRanges(bedgraph)
-g$score <- as.numeric(as.character(g$score))
-u.tab <- as(g, "UCSCData")
-si <- Seqinfo(genome="mm10")
-u.tab@seqinfo <- si
-export(u.tab, format = "BigWig", con="superEnhancerScores.bw")
+
+# Export bigwig
+# g$score <- as.numeric(as.character(g$score))
+# u.tab <- as(g, "UCSCData")
+# si <- Seqinfo(genome="mm10")
+# u.tab@seqinfo <- si
+# export(u.tab, format = "BigWig", con="superEnhancerScores.bw")
 
 # Table of top loci
 bedgraph$score <- as.numeric(as.character(bedgraph$score))
+bedgraph$gene <- gene_anno[data.frame(findOverlaps(g, gdf))$subjectHits]
 top <- head(bedgraph[order(bedgraph$score, decreasing = TRUE),], 100)
 dout <- data.frame(paste0(top$chr, ":", as.character(as.numeric(top$start) - 10000), "-", as.character(as.numeric(top$end) + 10000)), top$score)
 write.table(dout, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t", file = "superEnhancerRegions.txt")
 
+# Make fancier DF with names
+bg <- bedgraph[order(bedgraph$score, decreasing = TRUE),]
+bg <- data.frame(rank = rev(1:dim(bg)[1]), bg)
+
 ## Plots
 pdf("superEnhancerRanking.pdf")
-qplot(1:length(p), p) + geom_point(data = permdf, inherit.aes = FALSE, aes(rank, val, colour = "Permuted")) +
+bg$gene[20:dim(bg)[1]] <- ""
+ggplot(data = bg, aes(rank, score)) + geom_point() + 
   theme(plot.subtitle = element_text(vjust = 1), 
     plot.caption = element_text(vjust = 1)) +labs(title = "Possible Super Enhancers in ImmGen", 
-    x = "Rank Ordering", y = "Z Score") + theme_bw()
+    x = "Rank Ordering", y = "Z Score") + theme_bw() + 
+    geom_text_repel(data = bg, aes(rank, score, label = gene), inherit.aes = FALSE)
+#+  geom_point(data = permdf, inherit.aes = FALSE, aes(rank, val, colour = "Permuted"))
 dev.off()
 
 pdf("superEnhancerManhattan.pdf")
