@@ -1,0 +1,45 @@
+---
+title: "ImmGen TF Score Cutoff"
+author: Caleb Lareau
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup stuff, include=FALSE, eval = FALSE}
+library(reshape2)
+
+p05dev <- readRDS("../../output/p05dev.rds")
+p05devqNORM <- readRDS("../../output/p05dev_qNORM.rds")
+p05devNORM <- readRDS("../../output/p05devNORM.rds")
+
+none <- melt(assays(p05dev)$z)
+qnorm <- melt(assays(p05devqNORM)$z)
+cqnnorm <- melt(assays(p05devNORM)$z)
+
+
+
+```
+
+## The Question
+
+## Large-scale comparison
+Of the 827 motifs that do have at least 1 association p-value $p_a$ such that $p_a < 10e-05$, we see a very nice correlation between the scores as shown in the plot below. 
+
+```{r pressure, echo=FALSE, cache = TRUE}
+library(ggplot2)
+library(BuenColors)
+cd <- readRDS("../../output/TFscoreDesnity.rds")
+cd$logDensity <- log10(cd$density)
+ggplot(cd, aes( x = x,  y = y, color = logDensity)) + theme(plot.subtitle = element_text(vjust = 1), 
+    plot.caption = element_text(vjust = 1)) +labs(title = "Sample-Motif TF Score Threshold Comparison", 
+    x = "TF Score, p < 10e-04", y = "TF Score, p < 10e-05", colour = "Log Density") + 
+    geom_point(size = 0.01) + theme_bw() + scale_color_gradientn(colors = jdb_palette("samba_night"))
+```
+Each point is a sample-motif pair with TF scores at different binding significance p-values as noted on the axis labels. The log density of the points is denoted in the color.
+
+## Conclusion
+Using the more liberal threshold for the peak-motif associations seemingly is the way to go. We'll recover more motifs, and the scores are largely invariant when we use a more stringent threshold when at least 1 motif-association p-value is $p_a < 10e-05$.

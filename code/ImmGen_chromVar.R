@@ -22,25 +22,27 @@ bgpeaks <- "../output/backgroundPeaks.rds"
 expectations <- "../output/expectations.rds"
 
 if(!file.exists(immgenRDS) | !file.exists(bgpeaks) | !file.exists(expectations)){
-    csv <- "../../immgen_dat/total.cnt.table.1226.csv.gz"
+    csv <- "../../../immgen_dat/total.cnt.table.1226.csv.gz"
     counts <- fread(input = paste0('zcat < ', csv))
     libnames <- counts[1,]
     libnames <- libnames[,-1]
-    counts <- counts[-1,][,-1]
-    counts <- Matrix(data.matrix(counts))
+    counts <- data.matrix(counts[-1,][,-1])
+    counts2 <- normalize.quantiles(counts)
     
-    peakdf <- data.frame(fread("zcat < ../../immgen_dat/ImmGenATAC1219.peak.bed.gz"))
+    counts <- Matrix(data.matrix(counts2))
+    
+    peakdf <- data.frame(fread("zcat < ../../../immgen_dat/ImmGenATAC1219.peak.bed.gz"))
     names(peakdf) <- c("chr", "start", "end", "name")
     peaks <- GRanges(peakdf)
     immgen <- SummarizedExperiment(rowRanges = peaks, colData = t(libnames), assays = list(counts = counts))
     immgen <- add_gc_bias(immgen, genome = BSgenome.Mmusculus.UCSC.mm10)
-    saveRDS(immgen, file = immgenRDS)
+    #saveRDS(immgen, file = immgenRDS)
     
     bg <- get_background_peaks(immgen)
-    saveRDS(bg, file = bgpeaks)
+    #saveRDS(bg, file = bgpeaks)
     
     expectation <- compute_expectations(immgen)
-    saveRDS(expectation, file = expectations)
+    #saveRDS(expectation, file = expectations)
 }
 
 immgen <- readRDS(immgenRDS)
@@ -50,7 +52,7 @@ expectation <- readRDS(expectations)
 #' ## Get motifs; compute deviations. 
 #+ cache = TRUE, message=FALSE, warning=FALSE, echo = FALSE
 if(FALSE){
-  fimo <-  "../../immgen_dat/fimo_cisBP_jmotifs_p4.txt.gz"
+  fimo <-  "../../../immgen_dat/fimo_cisBP_jmotifs_p4.txt.gz"
   fimotab <- fread(input = paste0('zcat < ', fimo))
   peakidx <- as.integer(unname(sapply(data.frame(fimotab[,1])[,1], function(l) strsplit(l, split = "_")[[1]][2])))
   motifidx <- as.factor(data.frame(fimotab[,2])[,1])
@@ -66,7 +68,7 @@ if(FALSE){
   p05match <- SummarizedExperiment(assays=list(matches = sparseMatrix(i = peakidx[idx], j = as.numeric(motifidx)[idx])),
                                    colData = DataFrame(motif = motiflvl, row.names = motiflvl), rowRanges = immgen@rowRanges)
   dev05 <- compute_deviations(immgen, annotations = p05match, background_peaks = bg, expectation = expectation)
-  saveRDS(dev05, file="../output/p05dev.rds")
+  saveRDS(dev05, file="../../output/p05dev_qNORM.rds")
 }
 
 # match object
