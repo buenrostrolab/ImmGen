@@ -11,17 +11,19 @@ library(ggrepel)
 # TSS Peaks
 d <- read.table("../../../immgen_dat/ImmGenATAC1219.peak.bed", header = FALSE)
 anno <- as.character(read.table("../../data/peakAnnoVector.txt", header =TRUE)[,1])
-dd <- d[anno == "outside", ]
+#dd <- d[anno == "outside", ]
+dd <- d
 mid <- (dd$V2 + dd$V3)/2
 chr_name <- dd$V1
 gene_anno <- as.character(read.table("geneNames.txt", header =TRUE)[,1])
-gene_anno <- gene_anno[anno=="outside"]
+#gene_anno <- gene_anno[anno=="outside"]
 
 gdf <- makeGRangesFromDataFrame(data.frame(chr = dd$V1, start = dd$V2, end = dd$V3, gene = gene_anno), keep.extra.columns = TRUE)
 
 # Counts 
 csv <- "../../../immgen_dat/ATAC.density.population.mean.csv.gz"
-counts <- rowSums(data.matrix(data.frame(fread(input = paste0('zcat < ', csv))[anno == "outside",-1])))
+#counts <- rowSums(data.matrix(data.frame(fread(input = paste0('zcat < ', csv))[anno == "outside",-1])))
+counts <- rowSums(data.matrix(data.frame(fread(input = paste0('zcat < ', csv))[,-1])))
 
 chrs <- paste0("chr", c(as.character(1:19), "X"))
 nn <- 7
@@ -74,7 +76,31 @@ write.table(dout, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t
 bg <- bedgraph[order(bedgraph$score, decreasing = TRUE),]
 bg <- data.frame(rank = rev(1:dim(bg)[1]), bg)
 
+# Get Super Enhancers we like from Previous
+ov <- findOverlaps(makeGRangesFromDataFrame(bg), totalRegions)
+bg$Overlap <- 1:dim(bg)[1] %in% queryHits(ov)
+summary(bg[bg$Overlap,"score"])
+sum(head(bg$Overlap, 100))
+length(which(1:dim(bg)[1] %in% queryHits(ov)))
+
+library(ROCR)
+pp <- prediction(bg$score, bg$Overlap)
+ppp <- performance(pp, 'tpr','fpr')
+jpeg("se_ROC.jpg")
+plot(ppp,main="Super Enhancer Prediction - ROC Curves",col="blue")
+abline(0,1,col="grey")
+dev.off()
+performance(pp, "auc")
+
 ## Plots
+pdf("superEnhancerOverlap.pdf")
+bg$gene[20:dim(bg)[1]] <- ""
+ggplot(data = bg, aes(rank, score, color = Overlap)) + geom_point() + scale_colour_manual(values=c("black", "firebrick")) +
+  theme(plot.subtitle = element_text(vjust = 1), 
+    plot.caption = element_text(vjust = 1)) +labs(title = "Possible Super Enhancers in ImmGen", 
+    x = "Rank Ordering", y = "Z Score") + theme_bw()
+dev.off()
+
 pdf("superEnhancerRanking.pdf")
 bg$gene[20:dim(bg)[1]] <- ""
 ggplot(data = bg, aes(rank, score)) + geom_point() + 
@@ -84,6 +110,8 @@ ggplot(data = bg, aes(rank, score)) + geom_point() +
     geom_text_repel(data = bg, aes(rank, score, label = gene), inherit.aes = FALSE)
 #+  geom_point(data = permdf, inherit.aes = FALSE, aes(rank, val, colour = "Permuted"))
 dev.off()
+
+
 
 pdf("superEnhancerManhattan.pdf")
 for(chr in chrs){
