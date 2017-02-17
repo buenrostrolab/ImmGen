@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r setup stuff, include=FALSE, eval = FALSE}
 library(reshape2)
+library(ggplot2)
 
 p05dev <- readRDS("../../output/p05dev.rds")
 p05devqNORM <- readRDS("../../output/p05dev_qNORM.rds")
